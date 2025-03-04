@@ -6,14 +6,31 @@
 //
 
 import UIKit
+import FirebaseCore
+import FirebaseAuth
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
+    
+    var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        FirebaseApp.configure()
+        
+        if Auth.auth().currentUser != nil {
+                    let mainStoaryboard = UIStoryboard(name: "Main", bundle: Bundle.main)
+                    let vc = mainStoaryboard.instantiateViewController(withIdentifier: "homeViewController") as! HomeViewController
+                    window?.rootViewController = vc
+                }
+        
+        
+        
+        
+        
+        
         return true
     }
 
@@ -33,4 +50,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
 }
+
 
