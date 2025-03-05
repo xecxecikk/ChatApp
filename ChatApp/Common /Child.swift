@@ -9,8 +9,8 @@ import Foundation
 
 enum Child {
     static let USERS = "users"
-    static let CHAT_INBOX = "chatInbox"
-    static let CHAT_LAST = "chatLast"
+    static let CHAT_INBOX = "chat_inbox"
+    static let CHAT_LAST = "chat_last" 
     static let CHATS = "chats"
 }
 

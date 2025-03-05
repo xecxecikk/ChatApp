@@ -6,127 +6,193 @@
 //
 
 import UIKit
-import Firebase
+import FirebaseDatabase
 import FirebaseAuth
-class ChatViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+
+class ChatViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate{
+   
+    
     
     @IBOutlet weak var textMessage: UITextField!
     @IBOutlet weak var viewSendBottomConst: NSLayoutConstraint!
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var navBar: UINavigationBar!
-    
-    private var messages = [Message]()
-    private let databaseRef = Database.database().reference()
-    private let auth = Auth.auth()
-    var recipientName = ""
-    var recipientUid = ""
-    private var inboxKey = ""
-    private var lastMessageKey = ""
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupUI()
+   
+        
+        private var messages = [ChatMessage]()
+        private let databaseRef = Database.database().reference()
+        private let auth = Auth.auth()
+        
+        var recipientName = ""
+        var recipientUid = ""
+        private var inboxKey = ""
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            
+     
+
+                tableView.backgroundColor = UIColor.systemGray6 // 📌 Tablo arka planını gri yap
+                view.backgroundColor = UIColor.systemGray6 // 📌 Ekranın tamamını gri yap
+
+                tableView.contentInset = UIEdgeInsets.zero // 📌 Fazladan boşluğu kaldır
+                tableView.scrollIndicatorInsets = UIEdgeInsets.zero
+
+                if #available(iOS 11.0, *) {
+                    tableView.insetsContentViewsToSafeArea = false // 📌 Safe Area boşluğu olmasın
+          
+
+            setupUI()
         fetchChatData()
-    }
-    
-    private func setupUI() {
-        navBar.topItem?.title = recipientName
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(ChatTableViewCell.self, forCellReuseIdentifier: "chatTableViewCell")
-        tableView.tableFooterView = UIView()
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow), name: UIResponder.keyboardWillShowNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide), name: UIResponder.keyboardWillHideNotification, object: nil)
-    }
-    
-    @IBAction func close(_ sender: Any) {
-        dismiss(animated: true, completion: nil)
-    }
-    
-    private func fetchChatData() {
-        guard let currentUserUid = auth.currentUser?.uid else { return }
-        
-        databaseRef.child("chat_inbox").queryOrdered(byChild: "senderUid").queryEqual(toValue: currentUserUid).observeSingleEvent(of: .value) { snapshot in
-            for child in snapshot.children {
-                if let snap = child as? DataSnapshot, let data = snap.value as? [String: Any],
-                   let recipientUid = data["recipientUid"] as? String, recipientUid == self.recipientUid {
-                    self.inboxKey = data["inboxKey"] as? String ?? ""
-                    self.fetchMessages()
-                    return
+      
                 }
             }
-            self.createChatInbox()
+        private func setupUI() {
+            navBar.topItem?.title = recipientName
+            tableView.delegate = self
+            tableView.dataSource = self
+            textMessage.delegate = self
+            tableView.separatorStyle = .none
+            
+            tableView.register(ChatTableViewCell.self, forCellReuseIdentifier: "chatTableViewCell")
+            
+            NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow), name: UIResponder.keyboardWillShowNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide), name: UIResponder.keyboardWillHideNotification, object: nil)
         }
-    }
-    
-    private func createChatInbox() {
-        guard let currentUserUid = auth.currentUser?.uid else { return }
-        inboxKey = databaseRef.childByAutoId().key ?? ""
-        
-        let chatInboxData = ["inboxKey": inboxKey, "senderUid": currentUserUid, "recipientUid": recipientUid, "isRead": "0"]
-        databaseRef.child("chat_inbox").childByAutoId().setValue(chatInboxData)
-        databaseRef.child("chat_inbox").childByAutoId().setValue(["inboxKey": inboxKey, "senderUid": recipientUid, "recipientUid": currentUserUid, "isRead": "0"])
-        
-        databaseRef.child("chat_last").childByAutoId().setValue(["inboxKey": inboxKey, "messageKey": ""]) { error, snapshot in
-            self.lastMessageKey = snapshot.key ?? ""
+
+        private func fetchChatData() {
+            guard let currentUserUid = auth.currentUser?.uid else { return }
+
+            databaseRef.child("chat_inbox")
+                .child(currentUserUid)
+                .child(recipientUid)
+                .observeSingleEvent(of: .value) { snapshot in
+                    if let data = snapshot.value as? [String: Any], let storedInboxKey = data["inboxKey"] as? String {
+                        self.inboxKey = storedInboxKey
+                        self.fetchMessages()
+                    } else {
+                        self.createChatInbox()
+                    }
+                }
         }
-    }
-    
+
+        private func createChatInbox() {
+            guard let currentUserUid = auth.currentUser?.uid, !recipientUid.isEmpty else { return }
+            inboxKey = databaseRef.child("chats").childByAutoId().key ?? ""
+
+            let chatInboxDataSender: [String: Any] = [
+                "inboxKey": inboxKey,
+                "senderUid": currentUserUid,
+                "recipientUid": recipientUid,
+                "isRead": "0",
+                "lastMessage": ""
+            ]
+
+            let chatInboxDataReceiver: [String: Any] = [
+                "inboxKey": inboxKey,
+                "senderUid": recipientUid,
+                "recipientUid": currentUserUid,
+                "isRead": "0",
+                "lastMessage": ""
+            ]
+
+            databaseRef.child("chat_inbox").child(currentUserUid).child(recipientUid).setValue(chatInboxDataSender)
+            databaseRef.child("chat_inbox").child(recipientUid).child(currentUserUid).setValue(chatInboxDataReceiver)
+        }
+
     private func fetchMessages() {
-        databaseRef.child("chats").queryOrdered(byChild: "inboxKey").queryEqual(toValue: inboxKey).observe(.childAdded) { snapshot in
-            if let data = snapshot.value as? [String: Any], let senderUid = data["senderUid"] as? String, let message = data["message"] as? String {
-                self.messages.append(Message(senderUid: senderUid, message: message))
-                DispatchQueue.main.async {
-                    self.tableView.reloadData()
-                    self.scrollToBottom()
+        databaseRef.child("chats")
+            .queryOrdered(byChild: "inboxKey")
+            .queryEqual(toValue: inboxKey)
+            .observe(.childAdded, with: { snapshot in
+                if let data = snapshot.value as? [String: Any] {
+                    let message = ChatMessage(dictionary: data)
+                    self.messages.append(message)
+
+                    DispatchQueue.main.async {
+                        self.tableView.reloadData()
+                        self.scrollToBottom()
+                    }
                 }
+            })
+    }
+
+
+        private func scrollToBottom() {
+            if !messages.isEmpty {
+                let indexPath = IndexPath(row: messages.count - 1, section: 0)
+                tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
             }
         }
-    }
-    
-    private func scrollToBottom() {
-        if messages.isEmpty { return }
-        let indexPath = IndexPath(row: messages.count - 1, section: 0)
-        tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
-    }
-    
-    @IBAction func sendMessage(_ sender: Any) {
-        guard let messageText = textMessage.text, !messageText.isEmpty, let senderUid = auth.currentUser?.uid else { return }
-        
-        let messageData = ["inboxKey": inboxKey, "senderUid": senderUid, "message": messageText]
-        let messageRef = databaseRef.child("chats").childByAutoId()
-        messageRef.setValue(messageData) { _, snapshot in
-            self.textMessage.text = ""
-            self.databaseRef.child("chat_last").child(self.lastMessageKey).child("messageKey").setValue(snapshot.key ?? "")
-        }
-    }
-    
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return messages.count
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "chatTableViewCell", for: indexPath) as! ChatTableViewCell
-        let message = messages[indexPath.row]
-        cell.configure(with: message, isIncoming: message.senderUid != auth.currentUser?.uid)
-        return cell
-    }
-    
-    @objc private func keyboardWillShow(notification: Notification) {
-        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
-            viewSendBottomConst.constant = -keyboardSize.height + view.safeAreaInsets.bottom
-            scrollToBottom()
-        }
-    }
-    
-    @objc private func keyboardWillHide(notification: Notification) {
-        viewSendBottomConst.constant = 0
-    }
-}
-
-struct Message {
-    let senderUid: String
-    let message: String
-}
 
 
+        @IBAction func sendMessage(_ sender: Any) {
+            guard let messageText = textMessage.text, !messageText.isEmpty,
+                          let senderUid = auth.currentUser?.uid else {
+                        return
+                    }
+                    
+                    databaseRef.child("Users").child(senderUid).observeSingleEvent(of: .value) { snapshot in
+                        guard let userData = snapshot.value as? [String: Any] else { return }
+                        
+                        let senderName = userData["name"] as? String ?? "Unknown"
+                        let senderPhotoUrl = userData["photoUrl"] as? String ?? ""
+                        
+                        let messageData: [String: Any] = [
+                            "inboxKey": self.inboxKey,
+                            "senderUid": senderUid,
+                            "senderName": senderName,
+                            "senderPhotoUrl": senderPhotoUrl,
+                            "recipientUid": self.recipientUid,
+                            "message": messageText,
+                            "timestamp": ServerValue.timestamp()
+                        ]
+                        
+                        let messageRef = self.databaseRef.child("chats").childByAutoId()
+                        messageRef.setValue(messageData)
+                        
+                        self.textMessage.text = ""
+                        
+                        let lastMessageUpdate: [String: Any] = [
+                            "lastMessage": messageText,
+                            "timestamp": ServerValue.timestamp()
+                        ]
+                        
+                        self.databaseRef.child("chat_inbox").child(senderUid).child(self.recipientUid).updateChildValues(lastMessageUpdate)
+                        self.databaseRef.child("chat_inbox").child(self.recipientUid).child(senderUid).updateChildValues(lastMessageUpdate)
+                    }
+                }
+
+                @objc private func keyboardWillShow(notification: Notification) {
+                    if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
+                        viewSendBottomConst.constant = -keyboardSize.height + view.safeAreaInsets.bottom
+                        view.layoutIfNeeded()
+                        scrollToBottom()
+                    }
+                }
+
+                @objc private func keyboardWillHide(notification: Notification) {
+                    viewSendBottomConst.constant = 0
+                    view.layoutIfNeeded()
+                }
+
+                func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+                    return messages.count
+                }
+
+                func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+                    guard let cell = tableView.dequeueReusableCell(withIdentifier: "chatTableViewCell", for: indexPath) as? ChatTableViewCell else {
+                        fatalError("ChatTableViewCell bulunamadı!")
+                    }
+                    let message = messages[indexPath.row]
+                    cell.configure(with: message, isIncoming: message.senderUid != auth.currentUser?.uid)
+                    return cell
+                }
+
+                func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+                    textField.resignFirstResponder()
+                    return true
+                }
+            }
+    

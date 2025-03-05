@@ -7,7 +7,7 @@
 
 import UIKit
 import FirebaseCore
-import FirebaseAuth
+
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -19,15 +19,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Override point for customization after application launch.
         
         FirebaseApp.configure()
-        
-        if Auth.auth().currentUser != nil {
-                    let mainStoaryboard = UIStoryboard(name: "Main", bundle: Bundle.main)
-                    let vc = mainStoaryboard.instantiateViewController(withIdentifier: "homeViewController") as! HomeViewController
-                    window?.rootViewController = vc
-                }
-        
-        
-        
+      
         
         
         

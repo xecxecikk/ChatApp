@@ -9,36 +9,26 @@ import UIKit
 import FirebaseAuth
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-
+    
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        
-        // scene'i UIWindowScene olarak güvenli bir şekilde al
         guard let windowScene = (scene as? UIWindowScene) else { return }
+        window = UIWindow(windowScene: windowScene)
         
-        // Yeni bir UIWindow oluştur
-        let window = UIWindow(windowScene: windowScene)
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let initialVC: UIViewController
         
         if Auth.auth().currentUser != nil {
-            let mainStoryboard = UIStoryboard(name: "Main", bundle: nil)
-            let homeVC = mainStoryboard.instantiateViewController(withIdentifier: "homeViewController") as! HomeViewController
-            window.rootViewController = UINavigationController(rootViewController: homeVC)
+            initialVC = storyboard.instantiateViewController(withIdentifier: "homeViewController")
         } else {
-            let mainStoryboard = UIStoryboard(name: "Main", bundle: nil)
-            let loginVC = mainStoryboard.instantiateViewController(withIdentifier: "signInViewController")
-            window.rootViewController = UINavigationController(rootViewController: loginVC)
+            initialVC = storyboard.instantiateViewController(withIdentifier: "signInViewController")
         }
         
-        self.window = window
-        window.makeKeyAndVisible()
+        window?.rootViewController = UINavigationController(rootViewController: initialVC)
+        window?.makeKeyAndVisible()
     }
 }
-
-        // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
-        // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
-        // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-      
 
 
     func sceneDidDisconnect(_ scene: UIScene) {
