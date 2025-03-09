@@ -16,13 +16,13 @@ class Helper {
 
     static func imageLoad(imageView: UIImageView, url: String) {
         guard let imageUrl = URL(string: url) else {
-            print("Hata: Geçersiz URL: \(url)")  // 📌 Debug
+            print("Hata: Geçersiz URL: \(url)") 
             return
         }
 
         let downloadTask = URLSession.shared.dataTask(with: imageUrl) { (data, _, error) in
             if let error = error {
-                print("Resim yükleme hatası: \(error.localizedDescription)")  // 📌 Debug
+                print("Resim yükleme hatası: \(error.localizedDescription)")
                 return
             }
             
