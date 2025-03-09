@@ -19,22 +19,9 @@
 		9D7240792D479205008F76B0 /* ChatApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChatApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		9D72408B2D479208008F76B0 /* Exceptions for "ChatApp" folder in "ChatApp" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 9D7240782D479205008F76B0 /* ChatApp */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9D72407B2D479205008F76B0 /* ChatApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				9D72408B2D479208008F76B0 /* Exceptions for "ChatApp" folder in "ChatApp" target */,
-			);
 			path = ChatApp;
 			sourceTree = "<group>";
 		};
